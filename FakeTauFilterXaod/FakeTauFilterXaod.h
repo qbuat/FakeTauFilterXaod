@@ -45,8 +45,8 @@ class TruthFakeTau : public fastjet::PseudoJet
   int nTracks() const {return m_nTracks;}
   int nWideTracks() const {return m_nWideTracks;}
   
-  void set_nTracks(const int & n) {m_nTracks=n;}
-  void set_nWideTracks(const int & n) {m_nWideTracks=n;}
+  void set_ntracks(const int & n) {m_nTracks=n;}
+  void set_nwidetracks(const int & n) {m_nWideTracks=n;}
 
   bool is_good() const 
   {return ((m_nTracks > 0 and m_nTracks < 5) and (m_nWideTracks < 3));}

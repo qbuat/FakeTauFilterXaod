@@ -1,0 +1,71 @@
+#!/usr/bin/env python
+import os
+import logging; logging.basicConfig()
+from argparse import ArgumentParser
+from rootpy.io import root_open
+from rootpy.plotting import Canvas, Hist
+from rootpy.plotting.style import set_style
+import ROOT
+import re
+log = logging.getLogger(os.path.basename(__file__))
+log.setLevel(logging.INFO)
+
+
+HIST_EXPR = re.compile('^(?P<level>truth|reco)_(?P<var>\w+)_val_(?P<sel>\w+)?$')
+MAP_EXPR =  re.compile('^(?P<var>\w+)_val_(?P<sel>\w+)?$')
+
+if __name__ == '__main__':
+    log.info(' Start !')
+    
+    parser = ArgumentParser()
+    parser.add_argument('file', type=str)
+
+    args = parser.parse_args()
+    with root_open(args.file) as f:
+
+        histograms = {}
+        maps = {}
+        for _, _, hist_names in f.walk():
+            for name in hist_names:
+                
+                h = f[name]
+                # log.info('{0} is of type {1}'.format(h, type(h)))
+                if isinstance(h, ROOT.TH1):
+                    if h.GetDimension() == 1:
+                        match = re.match(HIST_EXPR, name)
+                        if match:
+                            sel = match.group('sel')
+                            if 'truthselected' in sel:
+                                istruth = True
+                                sel = sel.replace('_truthselected', '')
+                            else:
+                                istruth = False
+                            histograms[name] = {
+                                'level': match.group('level'),
+                                'var':  match.group('var'),
+                                'sel': sel,
+                                'istruth': istruth,
+                                'hist': h}
+                        else:
+                            log.warn('%s is not matched to a known name pattern' % name)
+                    else:
+                        match = re.match(MAP_EXPR, name)
+                        if match:
+                            sel = match.group('sel')
+                            if 'truthselected' in sel:
+                                istruth = True
+                                sel = sel.replace('_truthselected', '')
+                            else:
+                                istruth = False
+                            maps[name] = {
+                                'var':  match.group('var'),
+                                'sel': sel,
+                                'istruth': istruth,
+                                'hist': h}
+                        else:
+                            log.warn('%s is not matched to a known name pattern' % name)
+                else:
+                    log.warn('{0} of type {1} is not retrieved'.format(h, type(h)))
+
+        log.info(histograms)
+        log.info(maps)

@@ -111,9 +111,11 @@ int main(int argc, char **argv) {
       if (truthfake->is_good()) {
 	val_isol_tracks_truth.fill_histograms(tau, truthfake);
       }
+
+      // ::Info(APP_NAME, "Tracks = %d and Iso tracks = %d", truthfake->nTracks(), truthfake->nWideTracks());
+      // ::Info(APP_NAME, "Tracks = %d and Iso tracks = %d", truthfake->nTracks(), truthfake->nWideTracks());
       if (not is_medium_off)
 	continue;
-
       // if (not tau->isTau(xAOD::TauJetParameters::IsTauFlag::JetBDTSigMedium))
       // 	continue;
 

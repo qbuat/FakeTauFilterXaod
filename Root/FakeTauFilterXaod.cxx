@@ -140,8 +140,8 @@ StatusCode FakeTauFilterXaod::execute(const xAOD::TruthParticleContainer * Truth
       continue;
 
     auto truthfaketau = TruthFakeTau(jet_core);
-    truthfaketau.set_nTracks(n_tracks_core);
-    truthfaketau.set_nWideTracks(n_tracks_iso);
+    truthfaketau.set_ntracks(n_tracks_core);
+    truthfaketau.set_nwidetracks(n_tracks_iso);
     m_TruthFakeTaus.push_back(truthfaketau);
     ATH_MSG_DEBUG("TruthFakeTau with pt = " << truthfaketau.pt() 
 		 << ", eta = " << truthfaketau.pseudorapidity()
