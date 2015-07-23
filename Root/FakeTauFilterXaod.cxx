@@ -143,7 +143,7 @@ StatusCode FakeTauFilterXaod::execute(const xAOD::TruthParticleContainer * Truth
     truthfaketau.set_nTracks(n_tracks_core);
     truthfaketau.set_nWideTracks(n_tracks_iso);
     m_TruthFakeTaus.push_back(truthfaketau);
-    ATH_MSG_INFO("TruthFakeTau with pt = " << truthfaketau.pt() 
+    ATH_MSG_DEBUG("TruthFakeTau with pt = " << truthfaketau.pt() 
 		 << ", eta = " << truthfaketau.pseudorapidity()
 		 << ", phi = " << truthfaketau.phi()
 		 << ", nTracks = " << truthfaketau.nTracks());
@@ -225,9 +225,9 @@ bool FakeTauFilterXaod::is_iso_track(const fastjet::PseudoJet & track, const fas
 TruthFakeTau* FakeTauFilterXaod::matchedFake(const xAOD::IParticle * p)
 {
 
-  ATH_MSG_INFO("Tau with pt = "  << p->p4().Pt() 
-	       << ", eta = "     << p->p4().Eta()
-	       << ", phi = "     << p->p4().Phi());
+  ATH_MSG_DEBUG("Tau with pt = "  << p->p4().Pt() 
+		<< ", eta = "     << p->p4().Eta()
+		<< ", phi = "     << p->p4().Phi());
 
   TruthFakeTau* matched = NULL;
   double deltaR = 999999;
@@ -239,10 +239,8 @@ TruthFakeTau* FakeTauFilterXaod::matchedFake(const xAOD::IParticle * p)
     }
   }
   if (deltaR < 0.4) {
-    ATH_MSG_INFO("matched !");
     return matched;
   }  else {
-    ATH_MSG_INFO("not matched !");
     return NULL;
   }
 }

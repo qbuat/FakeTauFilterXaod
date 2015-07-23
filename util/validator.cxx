@@ -56,7 +56,13 @@ int main(int argc, char **argv) {
   CHECK(filter.initialize());
 
 
-  FilterValidation val1("val1");
+  FilterValidation val_presel("val_presel");
+  FilterValidation val_core_tracks("val_core_tracks");
+  FilterValidation val_isol_tracks("val_isol_tracks");
+  FilterValidation val_isol_tracks_truth("val_isol_tracks_truthselected");
+  FilterValidation val_bdt("val_bdt");
+  FilterValidation val_bdt_truth("val_bdt_truthselected");
+
   auto * h1 = new TH1I("matched", "matched", 2, 0, 2);
 
   Long64_t entries = event.getEntries();
@@ -72,7 +78,7 @@ int main(int argc, char **argv) {
     const xAOD::TauJetContainer *taus = 0;
     CHECK(event.retrieve(taus, "TauJets"));
     
-    ::Info(APP_NAME, "--------------------------------------");
+    // ::Info(APP_NAME, "--------------------------------------");
     CHECK(filter.execute(truthParticles));
 
     for (const auto tau: *taus) {
@@ -82,22 +88,69 @@ int main(int argc, char **argv) {
       
       if (fabs(tau->eta() > 2.5) )
 	  continue;
-      ::Info(APP_NAME, "consider taus of event %d", (int)entry);
+
+      // ::Info(APP_NAME, "consider taus of event %d", (int)entry);
       auto * truthfake = filter.matchedFake(tau);
       
       if (truthfake != NULL) {
 	h1->Fill(1);
-	val1.fill_histograms(tau, truthfake);
+	val_presel.fill_histograms(tau, truthfake);
       } else
 	h1->Fill(0);
+
+
+      if (tau->nTracks() != 1 and tau->nTracks() != 3)
+	continue;
+
+      if (truthfake != NULL)
+	val_core_tracks.fill_histograms(tau, truthfake);
+
+      if (tau->nWideTracks() != 0)
+	continue;
+      
+      if (truthfake != NULL) {
+	val_isol_tracks.fill_histograms(tau, truthfake);
+	if (truthfake->is_good())
+	  val_isol_tracks_truth.fill_histograms(tau, truthfake);
+      }
+
+      if (not tau->isTau(xAOD::TauJetParameters::IsTauFlag::JetBDTSigMedium))
+	continue;
+
+      if (truthfake != NULL){
+	val_bdt.fill_histograms(tau, truthfake);
+	if (truthfake->is_good())
+	  val_bdt_truth.fill_histograms(tau, truthfake);
+      }
+
 
     }
 	  
   }
   TFile fout("validation.root", "RECREATE");
-  for (auto it: val1.Histograms())
+  for (auto it: val_presel.Histograms())
     it.second->Write();
-  for (auto it: val1.Maps())
+  for (auto it: val_presel.Maps())
+    it.second->Write();
+  for (auto it: val_core_tracks.Histograms())
+    it.second->Write();
+  for (auto it: val_core_tracks.Maps())
+    it.second->Write();
+  for (auto it: val_isol_tracks.Histograms())
+    it.second->Write();
+  for (auto it: val_isol_tracks.Maps())
+    it.second->Write();
+  for (auto it: val_isol_tracks_truth.Histograms())
+    it.second->Write();
+  for (auto it: val_isol_tracks_truth.Maps())
+    it.second->Write();
+  for (auto it: val_bdt.Histograms())
+    it.second->Write();
+  for (auto it: val_bdt.Maps())
+    it.second->Write();
+  for (auto it: val_bdt_truth.Histograms())
+    it.second->Write();
+  for (auto it: val_bdt_truth.Maps())
     it.second->Write();
   h1->Write();
   fout.Close();

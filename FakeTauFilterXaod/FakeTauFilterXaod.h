@@ -29,7 +29,7 @@ class IdentifiedPseudoJet : public fastjet::PseudoJet {
 
   int pdg_id() const {return m_pdgid;}
   int charge() const {return m_charge;}
-
+    
  private:
   int m_pdgid;
   int m_charge;
@@ -47,6 +47,9 @@ class TruthFakeTau : public fastjet::PseudoJet
   
   void set_nTracks(const int & n) {m_nTracks=n;}
   void set_nWideTracks(const int & n) {m_nWideTracks=n;}
+
+  bool is_good() const 
+  {return ((m_nTracks > 0 and m_nTracks < 5) and (m_nWideTracks < 3));}
 
  private:
   int m_nTracks;
