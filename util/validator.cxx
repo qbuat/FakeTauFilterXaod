@@ -8,6 +8,7 @@
 // EDM includes
 #include "xAODEventInfo/EventInfo.h"
 #include "xAODTau/TauJetContainer.h"
+#include "xAODTau/TauDefs.h"
 
 // ROOT ACCESS Includes
 #include "xAODRootAccess/Init.h"
@@ -80,8 +81,9 @@ int main(int argc, char **argv) {
     
     // ::Info(APP_NAME, "--------------------------------------");
     CHECK(filter.execute(truthParticles));
-
     for (const auto tau: *taus) {
+
+      bool is_medium_off = tau->isTau(xAOD::TauJetParameters::JetBDTSigMedium);
 
       if (tau->pt() < 30000.) 
 	continue;
@@ -89,44 +91,40 @@ int main(int argc, char **argv) {
       if (fabs(tau->eta() > 2.5) )
 	  continue;
 
-      // ::Info(APP_NAME, "consider taus of event %d", (int)entry);
       auto * truthfake = filter.matchedFake(tau);
       
-      if (truthfake != NULL) {
-	h1->Fill(1);
-	val_presel.fill_histograms(tau, truthfake);
-      } else
-	h1->Fill(0);
-
+      h1->Fill((int)(truthfake != NULL));
+      
+      if (truthfake == NULL)
+	continue;
+      val_presel.fill_histograms(tau, truthfake);
 
       if (tau->nTracks() != 1 and tau->nTracks() != 3)
 	continue;
 
-      if (truthfake != NULL)
-	val_core_tracks.fill_histograms(tau, truthfake);
+      val_core_tracks.fill_histograms(tau, truthfake);
 
       if (tau->nWideTracks() != 0)
 	continue;
       
-      if (truthfake != NULL) {
-	val_isol_tracks.fill_histograms(tau, truthfake);
-	if (truthfake->is_good())
-	  val_isol_tracks_truth.fill_histograms(tau, truthfake);
+      val_isol_tracks.fill_histograms(tau, truthfake);
+      if (truthfake->is_good()) {
+	val_isol_tracks_truth.fill_histograms(tau, truthfake);
       }
-
-      if (not tau->isTau(xAOD::TauJetParameters::IsTauFlag::JetBDTSigMedium))
+      if (not is_medium_off)
 	continue;
 
-      if (truthfake != NULL){
-	val_bdt.fill_histograms(tau, truthfake);
-	if (truthfake->is_good())
-	  val_bdt_truth.fill_histograms(tau, truthfake);
-      }
+      // if (not tau->isTau(xAOD::TauJetParameters::IsTauFlag::JetBDTSigMedium))
+      // 	continue;
 
+      val_bdt.fill_histograms(tau, truthfake);
 
+      if (truthfake->is_good())
+	val_bdt_truth.fill_histograms(tau, truthfake);
     }
 	  
   }
+
   TFile fout("validation.root", "RECREATE");
   for (auto it: val_presel.Histograms())
     it.second->Write();

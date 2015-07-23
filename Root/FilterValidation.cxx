@@ -27,9 +27,8 @@ void FilterValidation::fill_histograms(const xAOD::TauJet * tau, const TruthFake
   m_h1d["truth_pt"]->Fill(truthFakeTau->pt() / 1000.);
   m_h1d["reco_ntracks"]->Fill(tau->nTracks());
   m_h1d["truth_ntracks"]->Fill(truthFakeTau->nTracks());
-  m_h1d["reco_nwidetracks"]->Fill(tau->nTracks());
-  m_h1d["truth_nwidetracks"]->Fill(truthFakeTau->nTracks());
-
+  m_h1d["reco_nwidetracks"]->Fill(tau->nWideTracks());
+  m_h1d["truth_nwidetracks"]->Fill(truthFakeTau->nWideTracks());
   m_h1d["reco_bdt_score"]->Fill(tau->discriminant(xAOD::TauJetParameters::TauID::BDTJetScore));
 
   m_h2d["ntracks"]->Fill(truthFakeTau->nTracks(), tau->nTracks());
