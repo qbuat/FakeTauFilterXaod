@@ -1,18 +1,160 @@
 #!/usr/bin/env python
 import os
-import logging; logging.basicConfig()
+import subprocess
+# import logging; logging.basicConfig()
+from rootpy import log; 
 from argparse import ArgumentParser
 from rootpy.io import root_open
-from rootpy.plotting import Canvas, Hist
+from rootpy.plotting import Canvas, Hist, Legend
 from rootpy.plotting.style import set_style
+from tabulate import tabulate
 import ROOT
 import re
-log = logging.getLogger(os.path.basename(__file__))
-log.setLevel(logging.INFO)
 
+log = log[os.path.basename(__file__)]
+
+set_style('ATLAS', shape='rect')
+ROOT.gROOT.SetBatch(True)
+ROOT.gStyle.SetPaintTextFormat("1.2f")
 
 HIST_EXPR = re.compile('^(?P<level>truth|reco)_(?P<var>\w+)_val_(?P<sel>\w+)?$')
 MAP_EXPR =  re.compile('^(?P<var>\w+)_val_(?P<sel>\w+)?$')
+
+MAP_VAR_DECORS = {
+    'pt': {
+        'x': 'Truth p_{T} [GeV]',
+        'y': 'Reconstructed p_{T} [GeV]'},
+    'ntracks': {
+        'x': 'Truth Number of Core Tracks',
+        'y': 'Reconstructed Number of Core Tracks'},
+    'nwidetracks': {
+        'x': 'Truth Number of Iso Tracks',
+        'y': 'Reconstructed Number of Iso Tracks'},
+}
+
+SEL_DECORS = {
+    'presel': 'Reconstructed taus',
+    'core_tracks': 'Offline prong requirement',
+    'isol_tracks': 'Offline tracks (core + iso) requirement',
+    'bdt': 'Medium ID taus',
+}
+
+
+def list_to_dict(input_list, key):
+    d = {}
+    for item in input_list:
+        d[item[key]] = item
+    return d
+
+
+def plot_bdt(hists, sample_name):
+    log.debug(hists)
+    h_reco_presel =  hists['presel']['hist']
+    h_reco_presel.color = 'black'
+    h_reco_presel.linewidth = 2
+    h_reco_presel.xaxis.title = 'BDT Score'
+    h_reco_presel.yaxis.title = 'Number of events'
+    h_reco_presel.title = 'Reconstructed taus'
+    h_reco_presel.legendstyle = 'l'
+
+    h_reco_bdt = hists['bdt']['hist']
+    h_reco_bdt.color = 'blue'
+    h_reco_bdt.linewidth = 2
+    h_reco_bdt.title = 'Medium taus'
+    h_reco_bdt.legendstyle = 'l'
+
+    h_reco_tr = hists['isol_tracks']['hist']
+    h_reco_tr.color = 'red'
+    h_reco_tr.linewidth = 2
+    h_reco_tr.title = 'Offline track selection'
+    h_reco_tr.legendstyle = 'l'
+
+    h_truth = hists['presel_truthselected']['hist']
+    h_truth.color = 'red'
+    h_truth.linestyle = 'dashed'
+    h_truth.linewidth = 2
+    h_truth.title = 'True track selection'
+    h_truth.legendstyle = 'l'
+    
+    c = Canvas()
+    c.SetLogy(True)
+    h_reco_presel.Draw('HIST')
+    h_reco_tr.Draw('SAMEHIST')
+    h_reco_bdt.Draw('SAMEHIST')
+    h_truth.Draw('SAMEHIST')
+    hlist = [h_reco_presel, h_reco_tr, h_truth, h_reco_bdt]
+    headers = [''] + [h.title for h in hlist]
+    yields = ['yields'] + [h.Integral() for h in hlist]
+    eff_main = ['yields / presel'] + [100 * h.Integral() / h_reco_presel.Integral() for h in hlist]
+    eff_truth = ['yields / truth sel'] + [100 * h.Integral() / h_truth.Integral() for h in hlist]
+    table = [yields, eff_main, eff_truth]
+    print tabulate(table, headers=headers) 
+    leg = Legend(hlist, textsize=17)
+    leg.Draw()
+    lat = ROOT.TLatex(
+        c.GetLeftMargin() , 1 - c.GetTopMargin() + 0.01, 
+        'Sample: {0}'.format(sample_name))
+    lat.SetTextSize(15)
+    lat.SetNDC(True)
+    lat.Draw()
+    c.SaveAs('./plots/bdt_score.png')
+
+def plot_pt(hists, sample_name):
+    log.debug(hists)
+    h_reco =  hists['reco']['hist']
+    h_reco.color = 'black'
+    h_reco.linewidth = 2
+    h_reco.xaxis.title = '#tau p_{T} [GeV]'
+    h_reco.yaxis.title = 'Number of events'
+    h_reco.title = 'Offline'
+    h_reco.legendstyle = 'l'
+    h_truth =  hists['truth']['hist']
+    h_truth.color = 'red'
+    h_truth.linewidth = 2
+    h_truth.xaxis.title = '#tau p_{T} [GeV]'
+    h_truth.yaxis.title = 'Number of events'
+    h_truth.title = 'Truth'
+    h_truth.legendstyle = 'l'
+
+    
+    c = Canvas()
+    c.SetLogy(True)
+    h_reco.Draw('HIST')
+    h_truth.Draw('SAMEHIST')
+    hlist = [h_reco, h_truth]
+    leg = Legend(hlist, textsize=17)
+    leg.Draw()
+    lat = ROOT.TLatex(
+        c.GetLeftMargin() , 1 - c.GetTopMargin() + 0.01, 
+        'Sample: {0}'.format(sample_name))
+    lat.SetTextSize(15)
+    lat.SetNDC(True)
+    lat.Draw()
+    c.SaveAs('./plots/pt_reco_truth.png')
+
+
+def plot_map(map, sample_name):
+    log.info('plotting {0} at {1}'.format(map['var'], map['sel']))
+    c = Canvas()
+    c.SetRightMargin(0.15)
+    h  = map['hist']
+    # print h.GetMarkerSize(), c.GetWindowHeight()
+    h.xaxis.title = map['xtitle']
+    h.yaxis.title = map['ytitle']
+    h.SetMarkerSize(800 *  h.GetMarkerSize())
+    if h.Integral() != 0:
+        h /= h.Integral()
+    h.Draw('colzTEXT')
+    lat = ROOT.TLatex(
+        c.GetLeftMargin() , 1 - c.GetTopMargin() + 0.01, 
+        'Sample: {0} -- Selection: {1}'.format(
+            sample_name, map['sel_label']))
+    lat.SetTextSize(15)
+    lat.SetNDC(True)
+    lat.Draw()
+    c.SaveAs('./plots/' + map['var'] + '_' + map['sel'] + '.png')
+    
+    
 
 if __name__ == '__main__':
     log.info(' Start !')
@@ -21,10 +163,13 @@ if __name__ == '__main__':
     parser.add_argument('file', type=str)
 
     args = parser.parse_args()
+    sample_name = args.file.split('/')[-1].replace('.root', '')
+
     with root_open(args.file) as f:
 
-        histograms = {}
+        histograms = []
         maps = {}
+        matched = f['matched']
         for _, _, hist_names in f.walk():
             for name in hist_names:
                 
@@ -40,12 +185,14 @@ if __name__ == '__main__':
                                 sel = sel.replace('_truthselected', '')
                             else:
                                 istruth = False
-                            histograms[name] = {
-                                'level': match.group('level'),
-                                'var':  match.group('var'),
-                                'sel': sel,
-                                'istruth': istruth,
-                                'hist': h}
+                            histograms.append({
+                                    'name': h.name,
+                                    'level': match.group('level'),
+                                    'var':  match.group('var'),
+                                    'sel': sel,
+                                    'full_sel': match.group('sel'),
+                                    'istruth': istruth,
+                                    'hist': h})
                         else:
                             log.warn('%s is not matched to a known name pattern' % name)
                     else:
@@ -61,11 +208,32 @@ if __name__ == '__main__':
                                 'var':  match.group('var'),
                                 'sel': sel,
                                 'istruth': istruth,
-                                'hist': h}
+                                'hist': h,
+                                'xtitle': MAP_VAR_DECORS[match.group('var')]['x'],
+                                'ytitle': MAP_VAR_DECORS[match.group('var')]['y'],
+                                'sel_label': SEL_DECORS[sel]}
                         else:
                             log.warn('%s is not matched to a known name pattern' % name)
                 else:
                     log.warn('{0} of type {1} is not retrieved'.format(h, type(h)))
 
         log.info(histograms)
-        log.info(maps)
+        filtered_h = filter(lambda a: a['level'] == 'reco' and a['var'] == 'bdt_score', histograms)
+        
+
+        plot_bdt(list_to_dict(filtered_h, 'full_sel'), sample_name)
+
+        filtered_h = filter(lambda a: a['full_sel'] == 'presel' and a['var'] == 'pt', histograms)
+        for h in filtered_h:
+            log.info(h)
+        plot_pt(list_to_dict(filtered_h, 'level'), sample_name)
+
+        # log.info(maps)
+        for _, map in maps.items():
+            # print map['var'], map['sel']
+            if not map['istruth']: 
+                plot_map(map, sample_name)
+            
+
+
+    subprocess.call('rsync -avz plots/* qbuat@higgs.phys.sfu.ca:/oldhome/www/Future/QuentinBuat/plotbook/plots', shell=True)

@@ -56,7 +56,7 @@ class TruthFakeTau : public fastjet::PseudoJet
   int m_nWideTracks;
 };
 
-typedef std::vector<TruthFakeTau> TruthFakeTaus;
+typedef std::vector<TruthFakeTau*> TruthFakeTaus;
 
 class FakeTauFilterXaod : virtual public IFakeTauFilterXaod, 
   public asg::AsgTool
@@ -67,6 +67,8 @@ class FakeTauFilterXaod : virtual public IFakeTauFilterXaod,
 
   FakeTauFilterXaod(const std::string & name);
   FakeTauFilterXaod(const FakeTauFilterXaod & other);
+
+  ~FakeTauFilterXaod();
 
   StatusCode initialize();
   StatusCode execute(const xAOD::TruthParticleContainer * TruthParticles);

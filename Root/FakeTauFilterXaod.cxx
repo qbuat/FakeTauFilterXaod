@@ -23,8 +23,6 @@ FakeTauFilterXaod::FakeTauFilterXaod(const std::string & name) : asg::AsgTool(na
   declareProperty("IsoDr", m_iso_dr=0.4);
   declareProperty("NumberOfFakeTaus", m_n_truthfakes=2);
 
-
-
 }
 
 FakeTauFilterXaod::FakeTauFilterXaod(const FakeTauFilterXaod & other) : asg::AsgTool(other.name() + "_copy")
@@ -32,6 +30,15 @@ FakeTauFilterXaod::FakeTauFilterXaod(const FakeTauFilterXaod & other) : asg::Asg
 {
 
 }
+
+FakeTauFilterXaod::~FakeTauFilterXaod()
+{
+  for (unsigned int ip = 0; ip < m_TruthFakeTaus.size(); ip++) {
+    delete m_TruthFakeTaus.at(ip); 
+  }
+}
+
+
 
 StatusCode FakeTauFilterXaod::initialize() 
 {
@@ -139,14 +146,14 @@ StatusCode FakeTauFilterXaod::execute(const xAOD::TruthParticleContainer * Truth
     if (jet_core.Pt() < m_pt_core_min)
       continue;
 
-    auto truthfaketau = TruthFakeTau(jet_core);
-    truthfaketau.set_ntracks(n_tracks_core);
-    truthfaketau.set_nwidetracks(n_tracks_iso);
+    TruthFakeTau* truthfaketau = new TruthFakeTau(jet_core);
+    truthfaketau->set_ntracks(n_tracks_core);
+    truthfaketau->set_nwidetracks(n_tracks_iso);
     m_TruthFakeTaus.push_back(truthfaketau);
-    ATH_MSG_DEBUG("TruthFakeTau with pt = " << truthfaketau.pt() 
-		 << ", eta = " << truthfaketau.pseudorapidity()
-		 << ", phi = " << truthfaketau.phi()
-		 << ", nTracks = " << truthfaketau.nTracks());
+    // ATH_MSG_DEBUG("TruthFakeTau with pt = " << truthfaketau.pt() 
+    // 		 << ", eta = " << truthfaketau.pseudorapidity()
+    // 		 << ", phi = " << truthfaketau.phi()
+    // 		 << ", nTracks = " << truthfaketau.nTracks());
 
 
     // check that the jet passes the track counting requirements
@@ -231,14 +238,17 @@ TruthFakeTau* FakeTauFilterXaod::matchedFake(const xAOD::IParticle * p)
 
   TruthFakeTau* matched = NULL;
   double deltaR = 999999;
-  for (auto part: m_TruthFakeTaus) {
-    double deltaR_tmp = DeltaR(p, part);
+  // for (auto part: m_TruthFakeTaus) {
+
+  for (unsigned int ip = 0; ip < m_TruthFakeTaus.size(); ip++) {
+    
+    double deltaR_tmp = DeltaR(p, *(m_TruthFakeTaus.at(ip)));
     if (deltaR_tmp < deltaR) {
       deltaR = deltaR_tmp;
-      matched = &part;
+      matched = m_TruthFakeTaus.at(ip);
     }
   }
-  if (deltaR < 0.4) {
+  if (deltaR < 0.2) {
     return matched;
   }  else {
     return NULL;

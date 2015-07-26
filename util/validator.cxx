@@ -58,13 +58,26 @@ int main(int argc, char **argv) {
 
 
   FilterValidation val_presel("val_presel");
+  FilterValidation val_presel_truth("val_presel_truthselected");
   FilterValidation val_core_tracks("val_core_tracks");
   FilterValidation val_isol_tracks("val_isol_tracks");
   FilterValidation val_isol_tracks_truth("val_isol_tracks_truthselected");
   FilterValidation val_bdt("val_bdt");
   FilterValidation val_bdt_truth("val_bdt_truthselected");
 
-  auto * h1 = new TH1I("matched", "matched", 2, 0, 2);
+  // std::map<std::string, FilterValidation> filters;
+  // filters["val_presel"] = val_presel; //FilterValidation("val_presel");
+  // filters["val_presel_truth"] = val_presel_truth; //FilterValidation("val_presel_truthselected");
+  // filters["val_core_tracks"] = val_core_tracks; //FilterValidation("val_core_tracks");
+  // filters["val_isol_tracks"] = val_isol_tracks; //FilterValidation("val_isol_tracks");
+  // filters["val_isol_tracks_truth"] = val_isol_tracks_truth; //FilterValidation("val_isol_tracks_truthselected");
+  // filters["val_bdt"] = val_bdt; //FilterValidation("val_bdt");
+  // filters["val_bdt_truth"] = val_bdt_truth; //FilterValidation("val_bdt_truthselected");
+
+
+  auto * h1 = new TH1I("matched", "matched", 1, 0.5, 1.5);
+  auto * he = new TH1F("events", "events", 1, 0.5, 1.5);
+  auto * hw = new TH1F("weighted_events", "weighted_events", 1, 0.5, 1.5);
 
   Long64_t entries = event.getEntries();
   for (Long64_t entry = 0; entry < entries; entry++) {
@@ -73,17 +86,33 @@ int main(int argc, char **argv) {
 
     event.getEntry(entry);
 
+    const xAOD::EventInfo *ei = 0;
+    CHECK(event.retrieve(ei, "EventInfo"));
+
     const xAOD::TruthParticleContainer *truthParticles = 0;
     CHECK(event.retrieve(truthParticles, "TruthParticles"));
 
     const xAOD::TauJetContainer *taus = 0;
     CHECK(event.retrieve(taus, "TauJets"));
     
+    double weight = 1.0;
+    bool isMC = false;
+    if (ei->eventType(xAOD::EventInfo::IS_SIMULATION)) 
+      isMC = true;
+
+    if (isMC) { 
+      const std::vector<float> weights = ei->mcEventWeights();
+      if (weights.size() > 0) 
+	weight = weights[0];
+    }
+
+    he->Fill(1.0);
+    hw->Fill(1.0, weight);
+
     // ::Info(APP_NAME, "--------------------------------------");
     CHECK(filter.execute(truthParticles));
     for (const auto tau: *taus) {
 
-      bool is_medium_off = tau->isTau(xAOD::TauJetParameters::JetBDTSigMedium);
 
       if (tau->pt() < 30000.) 
 	continue;
@@ -99,6 +128,9 @@ int main(int argc, char **argv) {
 	continue;
       val_presel.fill_histograms(tau, truthfake);
 
+      if (truthfake->is_good())
+	val_presel_truth.fill_histograms(tau, truthfake);
+
       if (tau->nTracks() != 1 and tau->nTracks() != 3)
 	continue;
 
@@ -113,6 +145,7 @@ int main(int argc, char **argv) {
       }
 
       // ::Info(APP_NAME, "Tracks = %d and Iso tracks = %d", truthfake->nTracks(), truthfake->nWideTracks());
+      bool is_medium_off = tau->isTau(xAOD::TauJetParameters::JetBDTSigMedium);
       // ::Info(APP_NAME, "Tracks = %d and Iso tracks = %d", truthfake->nTracks(), truthfake->nWideTracks());
       if (not is_medium_off)
 	continue;
@@ -128,9 +161,20 @@ int main(int argc, char **argv) {
   }
 
   TFile fout("validation.root", "RECREATE");
+  // for (auto filt: filters) {
+  //   for (auto it: filt.second.Histograms())
+  //     it.second->Write();
+  //   for (auto it: filt.second.Maps())
+  //     it.second->Write();
+  // }
+
   for (auto it: val_presel.Histograms())
     it.second->Write();
   for (auto it: val_presel.Maps())
+    it.second->Write();
+  for (auto it: val_presel_truth.Histograms())
+    it.second->Write();
+  for (auto it: val_presel_truth.Maps())
     it.second->Write();
   for (auto it: val_core_tracks.Histograms())
     it.second->Write();
@@ -153,5 +197,7 @@ int main(int argc, char **argv) {
   for (auto it: val_bdt_truth.Maps())
     it.second->Write();
   h1->Write();
+  he->Write();
+  hw->Write();
   fout.Close();
 }
