@@ -185,6 +185,11 @@ if __name__ == '__main__':
                                 sel = sel.replace('_truthselected', '')
                             else:
                                 istruth = False
+                            sum_of_weight = f['weighted_events'][1].value
+                            log.info(sum_of_weight)
+                            log.info(h.Integral())
+                            if sum_of_weight != 0:
+                                h /= sum_of_weight
                             histograms.append({
                                     'name': h.name,
                                     'level': match.group('level'),
@@ -204,6 +209,10 @@ if __name__ == '__main__':
                                 sel = sel.replace('_truthselected', '')
                             else:
                                 istruth = False
+                            sum_of_weight = f['weighted_events'][1].value
+                            log.info(sum_of_weight)
+                            if sum_of_weight != 0:
+                                h /= sum_of_weight
                             maps[name] = {
                                 'var':  match.group('var'),
                                 'sel': sel,
@@ -235,5 +244,6 @@ if __name__ == '__main__':
                 plot_map(map, sample_name)
             
 
-
+    log.info('Starting the rsync ...')
     subprocess.call('rsync -avz plots/* qbuat@higgs.phys.sfu.ca:/oldhome/www/Future/QuentinBuat/plotbook/plots', shell=True)
+    log.info('done. checkout http://hep.phys.sfu.ca/Future/QuentinBuat/plotbook')

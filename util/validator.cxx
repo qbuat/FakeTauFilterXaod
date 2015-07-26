@@ -122,26 +122,26 @@ int main(int argc, char **argv) {
 
       auto * truthfake = filter.matchedFake(tau);
       
-      h1->Fill((int)(truthfake != NULL));
+      h1->Fill((int)(truthfake != NULL), weight);
       
       if (truthfake == NULL)
 	continue;
-      val_presel.fill_histograms(tau, truthfake);
+      val_presel.fill_histograms(tau, truthfake, weight);
 
       if (truthfake->is_good())
-	val_presel_truth.fill_histograms(tau, truthfake);
+	val_presel_truth.fill_histograms(tau, truthfake, weight);
 
       if (tau->nTracks() != 1 and tau->nTracks() != 3)
 	continue;
 
-      val_core_tracks.fill_histograms(tau, truthfake);
+      val_core_tracks.fill_histograms(tau, truthfake, weight);
 
       if (tau->nWideTracks() != 0)
 	continue;
       
-      val_isol_tracks.fill_histograms(tau, truthfake);
+      val_isol_tracks.fill_histograms(tau, truthfake, weight);
       if (truthfake->is_good()) {
-	val_isol_tracks_truth.fill_histograms(tau, truthfake);
+	val_isol_tracks_truth.fill_histograms(tau, truthfake, weight);
       }
 
       // ::Info(APP_NAME, "Tracks = %d and Iso tracks = %d", truthfake->nTracks(), truthfake->nWideTracks());
@@ -152,10 +152,10 @@ int main(int argc, char **argv) {
       // if (not tau->isTau(xAOD::TauJetParameters::IsTauFlag::JetBDTSigMedium))
       // 	continue;
 
-      val_bdt.fill_histograms(tau, truthfake);
+      val_bdt.fill_histograms(tau, truthfake, weight);
 
       if (truthfake->is_good())
-	val_bdt_truth.fill_histograms(tau, truthfake);
+	val_bdt_truth.fill_histograms(tau, truthfake, weight);
     }
 	  
   }
