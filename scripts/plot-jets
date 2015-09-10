@@ -7,7 +7,7 @@ from argparse import ArgumentParser
 from rootpy.io import root_open
 from rootpy.plotting import Canvas, Hist, Legend
 from rootpy.plotting.style import set_style
-from tabulate import tabulate
+# from tabulate import tabulate
 import ROOT
 import re
 
@@ -17,7 +17,7 @@ set_style('ATLAS', shape='rect')
 ROOT.gROOT.SetBatch(True)
 ROOT.gStyle.SetPaintTextFormat("1.2f")
 
-SLICE_PATT = re.compile('^Py_jetjet_(?P<slice>JZ\d).root?$')
+SLICE_PATT = re.compile('^Py_jetjet_(?P<slice>JZ\dW).root?$')
 def get_slices(path):
     slices = []
     for f in os.listdir(path):
@@ -27,32 +27,42 @@ def get_slices(path):
 
 
 COLORS = {
-    'JZ0': 'black',
-    'JZ1': 'black',
-    'JZ2': 'black',
-    'JZ3': 'red',
-    'JZ4': 'blue',
-    'JZ5': 'green',
-    'JZ6': 'purple',
-    'JZ7': 'yellow',
-    'JZ8': 'brown',
+    'JZ0W': 'black',
+    'JZ1W': 'red',
+    'JZ2W': 'blue',
+    'JZ3W': 'green',
+    'JZ4W': 'purple',
+    'JZ5W': 'yellow',
+    'JZ6W': 'brown',
+    'JZ7W': 'brown',
+    'JZ8W': 'brown',
+    'JZ8W': 'brown',
+    'JZ9W': 'brown',
+    'JZ10W': 'brown',
+    'JZ11W': 'brown',
+    'JZ12W': 'brown',
     }
 
 xsec_filt_nevts = {
-    'JZ0': [7.8420e7, 0.97563, 2000000],
-    'JZ1': [7.8420e7, 0.024819, 2000000],
-    'JZ2': [2.4334e6, 0.010040, 2000000],
-    'JZ3': [2.6454e6, 0.011798, 2000000],
-    'JZ4': [2.5464e2, 0.013440, 2000000],
-    'JZ5': [4.5536, 0.014577, 1999000],
-    'JZ6': [2.5752e-01, 0.010018, 2000000],
-    'JZ7': [1.6214e-02, 0.011120, 1999000],
-    'JZ8': [6.2505e-04, 0.010331, 2000000],
+    'JZ0W':  [7.8420e07,  1.0240, 2000000],
+    'JZ1W':  [7.8420e07,  6.7198e-04, 2000000],
+    'JZ2W':  [2.4334e06,  3.3264e-04, 1992000],
+    'JZ3W':  [2.6454e06,  3.1953e-04, 2000000],
+    'JZ4W':  [2.5464e02,  5.3009e-04, 2000000],
+    'JZ5W':  [4.5536,     9.2325e-04, 1999000],
+    'JZ6W':  [2.5752e-01, 9.4016e-04, 1997000],
+    'JZ7W':  [1.6214e-02, 3.9282e-04, 1999000],
+    'JZ8W':  [6.2505e-04, 1.0162e-02, 2000000],
+    'JZ9W':  [1.9640e-05, 1.2054e-02, 2000000],
+    'JZ10W': [1.1961e-06, 5.8935e-03, 2000000],
+    'JZ11W': [4.2260e-08, 2.7015e-03, 1999000],
+    'JZ12W': [1.0370e-09, 4.2502e-03, 1808000],
     }
 
 
 def get_max(hlist):
     return max([h.GetBinContent(h.GetMaximumBin()) for h in hlist])
+
 def plot_distribution(hlist):
     c = Canvas()
     # c.SetLogy(True)
@@ -81,8 +91,9 @@ if __name__ == '__main__':
             log.info(match.group('slice'))
             rfile = root_open(os.path.join(args.path, s), 'read')
             h = rfile[args.hist]
+            sum_of_weight = rfile['weighted_events'][1].value
             x_f_n = xsec_filt_nevts[match.group('slice')]
-            # h.Scale(x_f_n[0] * x_f_n[1] / x_f_n[2])
+            h.Scale(x_f_n[0] * x_f_n[1] / sum_of_weight)
             h.color = COLORS[match.group('slice')]
             h.legendstyle = 'l'
             h.linewidth = 2

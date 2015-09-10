@@ -7,7 +7,7 @@ from argparse import ArgumentParser
 from rootpy.io import root_open
 from rootpy.plotting import Canvas, Hist, Legend
 from rootpy.plotting.style import set_style
-from tabulate import tabulate
+# from tabulate import tabulate
 import ROOT
 import re
 
@@ -37,6 +37,7 @@ SEL_DECORS = {
     'core_tracks': 'Offline prong requirement',
     'isol_tracks': 'Offline tracks (core + iso) requirement',
     'bdt': 'Medium ID taus',
+    'cr': 'Loose but not medium ID taus'
 }
 
 
@@ -63,6 +64,12 @@ def plot_bdt(hists, sample_name):
     h_reco_bdt.title = 'Medium taus'
     h_reco_bdt.legendstyle = 'l'
 
+    h_reco_cr = hists['cr']['hist']
+    h_reco_cr.color = 'green'
+    h_reco_cr.linewidth = 2
+    h_reco_cr.title = 'Loose but not Medium taus'
+    h_reco_cr.legendstyle = 'l'
+
     h_reco_tr = hists['isol_tracks']['hist']
     h_reco_tr.color = 'red'
     h_reco_tr.linewidth = 2
@@ -80,15 +87,20 @@ def plot_bdt(hists, sample_name):
     c.SetLogy(True)
     h_reco_presel.Draw('HIST')
     h_reco_tr.Draw('SAMEHIST')
+    # h_reco_cr.Draw('SAMEHIST')
     h_reco_bdt.Draw('SAMEHIST')
     h_truth.Draw('SAMEHIST')
-    hlist = [h_reco_presel, h_reco_tr, h_truth, h_reco_bdt]
+    hlist = [h_reco_presel, h_reco_tr, h_truth, h_reco_bdt] #, h_reco_cr]
     headers = [''] + [h.title for h in hlist]
     yields = ['yields'] + [h.Integral() for h in hlist]
     eff_main = ['yields / presel'] + [100 * h.Integral() / h_reco_presel.Integral() for h in hlist]
     eff_truth = ['yields / truth sel'] + [100 * h.Integral() / h_truth.Integral() for h in hlist]
-    table = [yields, eff_main, eff_truth]
-    print tabulate(table, headers=headers) 
+    print headers
+    print yields
+    print eff_main
+    print eff_truth
+    # table = [yields, eff_main, eff_truth]
+    # print tabulate(table, headers=headers) 
     leg = Legend(hlist, textsize=17)
     leg.Draw()
     lat = ROOT.TLatex(
@@ -188,8 +200,8 @@ if __name__ == '__main__':
                             sum_of_weight = f['weighted_events'][1].value
                             log.info(sum_of_weight)
                             log.info(h.Integral())
-                            if sum_of_weight != 0:
-                                h /= sum_of_weight
+                            # if sum_of_weight != 0:
+                            #     h /= sum_of_weight
                             histograms.append({
                                     'name': h.name,
                                     'level': match.group('level'),
@@ -232,7 +244,7 @@ if __name__ == '__main__':
 
         plot_bdt(list_to_dict(filtered_h, 'full_sel'), sample_name)
 
-        filtered_h = filter(lambda a: a['full_sel'] == 'presel' and a['var'] == 'pt', histograms)
+        filtered_h = filter(lambda a: a['full_sel'] == 'bdt' and a['var'] == 'pt', histograms)
         for h in filtered_h:
             log.info(h)
         plot_pt(list_to_dict(filtered_h, 'level'), sample_name)

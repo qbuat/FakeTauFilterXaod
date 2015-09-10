@@ -1,4 +1,6 @@
 #include "xAODBase/IParticle.h"
+#include "xAODTau/TauJet.h"
+/* #include "xAODTau/TauDefs.h" */
 
 
 #include <vector>
@@ -20,6 +22,13 @@ namespace Utils {
   bool comparePt(const xAOD::IParticle* t1, const xAOD::IParticle* t2) {
     return (t1->pt() > t2->pt() ? true: false);
   }
+
+  bool compareBDT(const xAOD::TauJet* t1, const xAOD::TauJet* t2) {
+    auto BDT_flag = xAOD::TauJetParameters::TauID::BDTJetScore;
+    return (t1->discriminant(BDT_flag) > t2->discriminant(BDT_flag) ? true: false);
+  }
+
+
 
   std::vector<std::string> splitNames(const std::string& files, std::string sep = ",") {
     std::vector<std::string> fileList;

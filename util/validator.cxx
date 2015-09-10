@@ -8,7 +8,9 @@
 // EDM includes
 #include "xAODEventInfo/EventInfo.h"
 #include "xAODTau/TauJetContainer.h"
+#include "xAODJet/JetContainer.h"
 #include "xAODTau/TauDefs.h"
+#include "TruthUtils/PIDUtils.h"
 
 // ROOT ACCESS Includes
 #include "xAODRootAccess/Init.h"
@@ -64,15 +66,8 @@ int main(int argc, char **argv) {
   FilterValidation val_isol_tracks_truth("val_isol_tracks_truthselected");
   FilterValidation val_bdt("val_bdt");
   FilterValidation val_bdt_truth("val_bdt_truthselected");
-
-  // std::map<std::string, FilterValidation> filters;
-  // filters["val_presel"] = val_presel; //FilterValidation("val_presel");
-  // filters["val_presel_truth"] = val_presel_truth; //FilterValidation("val_presel_truthselected");
-  // filters["val_core_tracks"] = val_core_tracks; //FilterValidation("val_core_tracks");
-  // filters["val_isol_tracks"] = val_isol_tracks; //FilterValidation("val_isol_tracks");
-  // filters["val_isol_tracks_truth"] = val_isol_tracks_truth; //FilterValidation("val_isol_tracks_truthselected");
-  // filters["val_bdt"] = val_bdt; //FilterValidation("val_bdt");
-  // filters["val_bdt_truth"] = val_bdt_truth; //FilterValidation("val_bdt_truthselected");
+  FilterValidation val_cr("val_cr");
+  FilterValidation val_cr_truth("val_cr_truthselected");
 
 
   auto * h1 = new TH1I("matched", "matched", 1, 0.5, 1.5);
@@ -95,6 +90,10 @@ int main(int argc, char **argv) {
     const xAOD::TauJetContainer *taus = 0;
     CHECK(event.retrieve(taus, "TauJets"));
     
+    const xAOD::JetContainer *jets = 0;
+    CHECK(event.retrieve(jets, "AntiKt4LCTopoJets"));
+
+
     double weight = 1.0;
     bool isMC = false;
     if (ei->eventType(xAOD::EventInfo::IS_SIMULATION)) 
@@ -108,6 +107,11 @@ int main(int argc, char **argv) {
 
     he->Fill(1.0);
     hw->Fill(1.0, weight);
+
+    for (const auto jet: *jets) {
+      int label = jet->getAttribute<int>("PartonTruthLabelID");
+      ::Info(APP_NAME, "Truth parton label: %d - Parton: %d - Quark: %d", label, (int)MC::PID::isParton(label), (int)MC::PID::isQuark(label));
+    }
 
     // ::Info(APP_NAME, "--------------------------------------");
     CHECK(filter.execute(truthParticles));
@@ -144,13 +148,18 @@ int main(int argc, char **argv) {
 	val_isol_tracks_truth.fill_histograms(tau, truthfake, weight);
       }
 
-      // ::Info(APP_NAME, "Tracks = %d and Iso tracks = %d", truthfake->nTracks(), truthfake->nWideTracks());
+      bool is_loose_off = tau->isTau(xAOD::TauJetParameters::JetBDTSigLoose);
       bool is_medium_off = tau->isTau(xAOD::TauJetParameters::JetBDTSigMedium);
+
+      if (is_loose_off and not is_medium_off) {
+	val_cr.fill_histograms(tau, truthfake, weight);
+	if (truthfake->is_good())
+	  val_cr_truth.fill_histograms(tau, truthfake, weight);
+      }
       // ::Info(APP_NAME, "Tracks = %d and Iso tracks = %d", truthfake->nTracks(), truthfake->nWideTracks());
+
       if (not is_medium_off)
 	continue;
-      // if (not tau->isTau(xAOD::TauJetParameters::IsTauFlag::JetBDTSigMedium))
-      // 	continue;
 
       val_bdt.fill_histograms(tau, truthfake, weight);
 
@@ -161,12 +170,6 @@ int main(int argc, char **argv) {
   }
 
   TFile fout("validation.root", "RECREATE");
-  // for (auto filt: filters) {
-  //   for (auto it: filt.second.Histograms())
-  //     it.second->Write();
-  //   for (auto it: filt.second.Maps())
-  //     it.second->Write();
-  // }
 
   for (auto it: val_presel.Histograms())
     it.second->Write();
@@ -195,6 +198,14 @@ int main(int argc, char **argv) {
   for (auto it: val_bdt_truth.Histograms())
     it.second->Write();
   for (auto it: val_bdt_truth.Maps())
+    it.second->Write();
+  for (auto it: val_cr.Histograms())
+    it.second->Write();
+  for (auto it: val_cr.Maps())
+    it.second->Write();
+  for (auto it: val_cr_truth.Histograms())
+    it.second->Write();
+  for (auto it: val_cr_truth.Maps())
     it.second->Write();
   h1->Write();
   he->Write();
