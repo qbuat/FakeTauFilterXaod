@@ -30,9 +30,16 @@ MAP_VAR_DECORS = {
     'nwidetracks': {
         'x': 'Truth Number of Iso Tracks',
         'y': 'Reconstructed Number of Iso Tracks'},
-}
+    'reso_reco_pt': {
+        'x': 'Reconstructed p_{T} [GeV]',
+        'y': '(Reco - Truth) [GeV]'},
+    'reso_truth_pt': {
+        'x': 'Truth p_{T} [GeV]',
+        'y': '(Reco - Truth) [GeV]'},
+    }
 
 SEL_DECORS = {
+    'nosel': 'No selection (simple truth matching)',
     'presel': 'Reconstructed taus',
     'core_tracks': 'Offline prong requirement',
     'isol_tracks': 'Offline tracks (core + iso) requirement',
@@ -252,7 +259,7 @@ if __name__ == '__main__':
         # log.info(maps)
         for _, map in maps.items():
             # print map['var'], map['sel']
-            if not map['istruth']: 
+            if map['istruth']: 
                 plot_map(map, sample_name)
             
 

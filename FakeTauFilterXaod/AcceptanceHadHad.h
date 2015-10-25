@@ -8,6 +8,7 @@
 #include "TH1F.h"
 
 #include "FakeTauFilterXaod/HistogramsBook.h"
+#include "FakeTauFilterXaod/FakeTauFilterXaod.h"
 
 class AcceptanceHadHad : public EL::Algorithm
 {
@@ -37,12 +38,13 @@ public:
 public:
 
   TH1F* m_cutflow; //!
+  TH1F* m_truthpairs; //!
 
   HistogramsBook m_book; //!
   HistogramsBook m_book_os; //!
-  HistogramsBook m_book_nos; //!
   HistogramsBook m_book_loose; //!
   
+  FakeTauFilterXaod *m_filter; //!
 
  public:
   // this is a standard constructor
@@ -60,6 +62,10 @@ public:
   virtual EL::StatusCode histFinalize ();
 
   virtual EL::StatusCode select_taus(xAOD::TauJetContainer *selected_taus, const xAOD::TauJetContainer *taus);
+  virtual EL::StatusCode select_taus_fromtruth(xAOD::TauJetContainer *selected_taus, 
+					       const xAOD::TauJetContainer *taus,
+					       const DiTruthFakeTaus & truth_pairs);
+
   virtual EL::StatusCode select_jets(xAOD::JetContainer *selected_jets, const xAOD::JetContainer *jets, const xAOD::TauJet *tau1, const xAOD::TauJet *tau2);
   // this is needed to distribute the algorithm to the workers
   ClassDef(AcceptanceHadHad, 1);

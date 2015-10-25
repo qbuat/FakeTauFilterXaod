@@ -34,32 +34,18 @@ ClassImp(AcceptanceHadHad)
 
 
 
-AcceptanceHadHad :: AcceptanceHadHad () : 
-m_book("default"),
+AcceptanceHadHad :: AcceptanceHadHad () : m_book("default"),
   m_book_os("os"),
-  m_book_nos("nos"),
   m_book_loose("loose")
 
 {
-  // Here you put any code for the base initialization of variables,
-  // e.g. initialize all pointers to 0.  Note that you should only put
-  // the most basic initialization here, since this method will be
-  // called on both the submission and the worker node.  Most of your
-  // initialization code will go into histInitialize() and
-  // initialize().
+
 }
 
 
 
 EL::StatusCode AcceptanceHadHad :: setupJob (EL::Job& job)
 {
-  // Here you put code that sets up the job on the submission object
-  // so that it is ready to work with your algorithm, e.g. you can
-  // request the D3PDReader service or add output files.  Any code you
-  // put here could instead also go into the submission script.  The
-  // sole advantage of putting it here is that it gets automatically
-  // activated/deactivated when you add/remove the algorithm from your
-  // job, which may or may not be of value to you.
   job.useXAOD ();
   EL_RETURN_CHECK("setupJob ()", xAOD::Init());
 
@@ -76,13 +62,16 @@ EL::StatusCode AcceptanceHadHad :: histInitialize ()
   // connected.
   m_cutflow = new TH1F("cutflow", "cutflow", 10, 0, 10);
   m_cutflow->GetXaxis()->SetBinLabel(1, "init");
-  m_cutflow->GetXaxis()->SetBinLabel(2, "taus");
-  m_cutflow->GetXaxis()->SetBinLabel(3, "taus_pt");
-  m_cutflow->GetXaxis()->SetBinLabel(4, "dr_tau_tau");
-  m_cutflow->GetXaxis()->SetBinLabel(5, "jets");
-  m_cutflow->GetXaxis()->SetBinLabel(6, "jets_pt");
-  m_cutflow->GetXaxis()->SetBinLabel(7, "deta_jets");
-  m_cutflow->GetXaxis()->SetBinLabel(8, "l1taus");
+  m_cutflow->GetXaxis()->SetBinLabel(2, "truth_matching");
+  m_cutflow->GetXaxis()->SetBinLabel(3, "taus");
+  m_cutflow->GetXaxis()->SetBinLabel(4, "taus_pt");
+  m_cutflow->GetXaxis()->SetBinLabel(5, "dr_tau_tau");
+  m_cutflow->GetXaxis()->SetBinLabel(6, "taus_tracks");
+  m_cutflow->GetXaxis()->SetBinLabel(7, "os");
+  m_cutflow->GetXaxis()->SetBinLabel(8, "loose");
+  m_cutflow->GetXaxis()->SetBinLabel(9, "medium");
+
+  m_truthpairs = new TH1F("ntruthpairs", "ntruthpairs", 10, 0, 10);
 
   m_book.book();
   m_book.record(wk());
@@ -90,13 +79,11 @@ EL::StatusCode AcceptanceHadHad :: histInitialize ()
   m_book_os.book();
   m_book_os.record(wk());
 
-  m_book_nos.book();
-  m_book_nos.record(wk());
-
   m_book_loose.book();
   m_book_loose.record(wk());
     
   wk()->addOutput(m_cutflow);
+  wk()->addOutput(m_truthpairs);
 
   return EL::StatusCode::SUCCESS;
 }
@@ -124,14 +111,15 @@ EL::StatusCode AcceptanceHadHad :: changeInput (bool /*firstFile*/)
 
 EL::StatusCode AcceptanceHadHad :: initialize ()
 {
-  // Here you do everything that you need to do after the first input
-  // file has been connected and before the first event is processed,
-  // e.g. create additional histograms based on which variables are
-  // available in the input files.  You can also create all of your
-  // histograms and trees in here, but be aware that this method
-  // doesn't get called if no events are processed.  So any objects
-  // you create here won't be available in the output if you have no
-  // input events.
+
+  if (asg::ToolStore::contains<FakeTauFilterXaod>("FakeTauFilter"))
+    m_filter = asg::ToolStore::get<FakeTauFilterXaod>("FakeTauFilter");
+  else {
+    m_filter = new FakeTauFilterXaod("FakeTauFilter");
+    EL_RETURN_CHECK("initialize", m_filter->initialize());
+  }
+    
+
   xAOD::TEvent* event = wk()->xaodEvent();
   ATH_MSG_INFO("Number of events = " << event->getEntries());
   return EL::StatusCode::SUCCESS;
@@ -159,26 +147,55 @@ EL::StatusCode AcceptanceHadHad :: execute ()
   const xAOD::JetContainer* jets = 0;
   EL_RETURN_CHECK("execute", event->retrieve(jets, "AntiKt4LCTopoJets"));
 
+  const xAOD::TruthParticleContainer *truthParticles = 0;
+  EL_RETURN_CHECK("execute", event->retrieve(truthParticles, "TruthParticles"));
+
+  EL_RETURN_CHECK("execute", m_filter->execute(truthParticles));
+  auto filtered_pairs = m_filter->GetDiTruthFakeTaus();
+
+
+  if (filtered_pairs.size() == 0)
+    return EL::StatusCode::SUCCESS;
+
+  m_cutflow->Fill("truth_matching", 1);
+  m_truthpairs->Fill(filtered_pairs.size());
+
   xAOD::TauJetContainer* selected_taus = new xAOD::TauJetContainer();
   xAOD::AuxContainerBase* selected_taus_aux = new xAOD::AuxContainerBase();
   selected_taus->setStore(selected_taus_aux);
 
-  select_taus(selected_taus, taus);
+  select_taus_fromtruth(selected_taus, taus, filtered_pairs);
+  ATH_MSG_DEBUG("number of selected taus = "<< selected_taus->size());
 
-  selected_taus->sort(Utils::compareBDT);
-
-  if (selected_taus->size() < 2)
+  if (selected_taus->size() < 2) {
+    ATH_MSG_INFO("SCAN THE TRUE PAIRS");
+    for (auto truth_pair: filtered_pairs) {
+      ATH_MSG_INFO("first: pt = "<< (truth_pair.first)->pt()
+		   << ", eta = " << (truth_pair.first)->eta()
+		   << ", phi = " << (truth_pair.first)->phi());
+      ATH_MSG_INFO("second: pt = "<< (truth_pair.second)->pt()
+		   << ", eta = "  << (truth_pair.second)->eta()
+		   << ", phi = "  << (truth_pair.second)->phi());
+    }
+    ATH_MSG_DEBUG("number of truth-level pairs = " << filtered_pairs.size());
     return EL::StatusCode::SUCCESS;
+  }
 
   m_cutflow->Fill("taus", 1);
 
   xAOD::TauJet* tau1 = selected_taus->at(0);
   xAOD::TauJet* tau2 = selected_taus->at(1);
 
+  m_book.fill(tau1, tau2, 1.);
+  for (const auto tau: *selected_taus) {
+    auto * truthfake = m_filter->matchedFake(tau);
+    m_book.fill_resol(tau, truthfake);
+  }
+
   // Leading tau pt cut
   if (tau1->pt() < tau1_pt)
     return EL::StatusCode::SUCCESS;
-
+  
   // Subleading tau pt cut
   if (tau2->pt() < tau2_pt)
     return EL::StatusCode::SUCCESS;
@@ -193,60 +210,42 @@ EL::StatusCode AcceptanceHadHad :: execute ()
     return EL::StatusCode::SUCCESS;
 
   m_cutflow->Fill("dr_tau_tau", 1);
-
-  // ATH_MSG_INFO("DR(tau1, tau2) = " << tau1->p4().DeltaR(tau2->p4()));
   
-  xAOD::JetContainer* selected_jets = new xAOD::JetContainer();
-  xAOD::AuxContainerBase* selected_jets_aux = new xAOD::AuxContainerBase();
-  selected_jets->setStore(selected_jets_aux);
-  select_jets(selected_jets, jets, tau1, tau2);
+  // ntracks cut
+  if (tau1->nTracks() != 1 and tau1->nTracks() != 3)
+    return EL::StatusCode::SUCCESS;                                                                                                   
 
-  // ATH_MSG_INFO("Number of jets = " << selected_jets->size());
-  if ((int)selected_jets->size() < n_jets)
+  if (tau2->nTracks() != 1 and tau2->nTracks() != 3)
+    return EL::StatusCode::SUCCESS;                                                                                                   
+  
+  m_cutflow->Fill("taus_tracks", 1);
+
+  // os cut
+  if (tau1->charge() * tau2->charge() < 0)
+    return EL::StatusCode::SUCCESS;
+  
+  m_cutflow->Fill("os", 1);
+  m_book_os.fill(tau1, tau2, 1.);
+  
+
+  // loose-loose
+  if (not tau1->isTau(xAOD::TauJetParameters::JetBDTSigLoose))
     return EL::StatusCode::SUCCESS;
 
-  m_cutflow->Fill("jets", 1);
+  if (not tau2->isTau(xAOD::TauJetParameters::JetBDTSigLoose))
+    return EL::StatusCode::SUCCESS;
 
+  m_cutflow->Fill("loose", 1);
+  m_book_loose.fill(tau1, tau2, 1.);
 
-  xAOD::Jet * jet1 = nullptr;
-  xAOD::Jet * jet2 = nullptr;
+  // medium-medium
+  if (not tau1->isTau(xAOD::TauJetParameters::JetBDTSigMedium))
+    return EL::StatusCode::SUCCESS;
 
-  if (n_jets > 0) {
-    jet1  = selected_jets->at(0);
+  if (not tau2->isTau(xAOD::TauJetParameters::JetBDTSigMedium))
+    return EL::StatusCode::SUCCESS;
 
-    if (jet1->pt() < jet1_pt)
-      return EL::StatusCode::SUCCESS;
-
-    if (n_jets > 1) { 
-      jet2  = selected_jets->at(1);
-
-      if (jet2->pt() < jet2_pt)
-	return EL::StatusCode::SUCCESS;
-      m_cutflow->Fill("jets_pt", 1);
-
-      double delta_eta = fabs(jet1->eta() - jet2->eta());
-      if (delta_eta < delta_eta_jj)
-	return EL::StatusCode::SUCCESS;
-      m_cutflow->Fill("deta_jets", 1);
-
-    } else {
-      m_cutflow->Fill("jets_pt", 1);
-    }      
-  }    
-
-  ATH_MSG_DEBUG("Read event number "<< wk()->treeEntry() << " / " << event->getEntries());
-  ATH_MSG_DEBUG("Fill kinematics histograms:");
-
-  m_book.fill(tau1, tau2, 1.);
-
-  if (tau1->charge() * tau1->charge() < 0)
-    m_book_os.fill(tau1, tau2, 1.);
-  else
-    m_book_nos.fill(tau1, tau2, 1.);
-      
-  if (tau1->isTau(xAOD::TauJetParameters::JetBDTSigLoose) and tau2->isTau(xAOD::TauJetParameters::JetBDTSigLoose))
-    m_book_loose.fill(tau1, tau2, 1.);
-
+  m_cutflow->Fill("medium", 1);
 
 
 
@@ -379,3 +378,32 @@ EL::StatusCode AcceptanceHadHad :: select_jets(xAOD::JetContainer *selected_jets
   return EL::StatusCode::SUCCESS;
 }
 
+EL::StatusCode AcceptanceHadHad :: select_taus_fromtruth(xAOD::TauJetContainer *selected_taus, 
+							 const xAOD::TauJetContainer *taus,
+							 const DiTruthFakeTaus & truth_pairs)
+{
+
+
+  if (truth_pairs.size() < 1) 
+    return EL::StatusCode::SUCCESS;
+
+  // auto truth_pair = truth_pairs[0];
+  for (auto truth_pair: truth_pairs) {
+    // selected pair
+    selected_taus->clear();
+    for (const auto tau: *taus) {
+      if (m_filter->DeltaR(tau, *(truth_pair.first)) < 0.5 or 
+	  m_filter->DeltaR(tau, *(truth_pair.second)) < 0.5) {
+	xAOD::TauJet * new_tau = new xAOD::TauJet();
+	new_tau->makePrivateStore(*tau);
+	selected_taus->push_back(new_tau);
+      }
+    }
+    if (selected_taus->size() > 1)
+      break;
+  }
+  // sort by pt
+  selected_taus->sort(Utils::comparePt);
+
+  return EL::StatusCode::SUCCESS;
+}

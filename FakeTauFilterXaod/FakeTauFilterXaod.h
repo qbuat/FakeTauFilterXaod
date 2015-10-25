@@ -49,7 +49,10 @@ class TruthFakeTau : public fastjet::PseudoJet
   void set_nwidetracks(const int & n) {m_nWideTracks=n;}
 
   bool is_good() const 
-  {return ((m_nTracks >= 0 and m_nTracks < 5) and (m_nWideTracks < 2));}
+  {
+    // Those cuts are hardcoded, this is bad practice :-/
+    return ((m_nTracks >= 0 and m_nTracks <= 4) and (m_nWideTracks >= 0 and m_nWideTracks <= 2));
+  }
 
  private:
   int m_nTracks;
@@ -57,7 +60,7 @@ class TruthFakeTau : public fastjet::PseudoJet
 };
 
 typedef std::vector<TruthFakeTau*> TruthFakeTaus;
-
+typedef std::vector<std::pair<TruthFakeTau*, TruthFakeTau*>> DiTruthFakeTaus;
 class FakeTauFilterXaod : virtual public IFakeTauFilterXaod, 
   public asg::AsgTool
 {
@@ -77,13 +80,15 @@ class FakeTauFilterXaod : virtual public IFakeTauFilterXaod,
 
   TruthFakeTaus GetTruthFakeTaus() {return m_TruthFakeTaus;} 
 
+  DiTruthFakeTaus GetDiTruthFakeTaus() {return m_DiTruthFakeTaus;}
+
   TruthFakeTau* matchedFake(const xAOD::IParticle * p);
 
  private :
   
   bool m_pass_filter;
   TruthFakeTaus m_TruthFakeTaus;
-
+  DiTruthFakeTaus m_DiTruthFakeTaus;
   double m_fastjet_cone_size;
   double m_fastjet_pt_min;
   double m_fastjet_eta_max;
@@ -97,6 +102,9 @@ class FakeTauFilterXaod : virtual public IFakeTauFilterXaod,
   double m_iso_dr;
   int m_n_truthfakes;
 
+  double m_dr_tau_tau;
+  void make_pairs();
+
   bool is_good_jet(const fastjet::PseudoJet & jet);
   bool is_good_track(const IdentifiedPseudoJet & track);
   bool is_core_track(const fastjet::PseudoJet & track, const fastjet::PseudoJet & jet);
@@ -104,6 +112,7 @@ class FakeTauFilterXaod : virtual public IFakeTauFilterXaod,
 
   bool isGenStable(const xAOD::TruthParticle * part);
 
+ public:
   double DeltaR(const xAOD::IParticle * part, const TruthFakeTau & truthFakeTau);
 
 

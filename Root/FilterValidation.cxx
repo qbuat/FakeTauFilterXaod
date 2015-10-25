@@ -18,6 +18,8 @@ FilterValidation::FilterValidation(const std::string & name)
   m_h2d["ntracks"] = new TH2F(("ntracks_" + name).c_str(), "ntracks", 10, 0, 10, 10, 0, 10);
   m_h2d["nwidetracks"] = new TH2F(("nwidetracks_" + name).c_str(), "nwidetracks", 10, 0, 10, 10, 0, 10);
   m_h2d["pt"] = new TH2F(("pt_" + name).c_str(), "pt", 16, 20, 100, 16, 20, 100);
+  m_h2d["reso_truth_pt"] = new TH2F(("reso_truth_pt_" + name).c_str(), "reso vs truth pt", 16, 20, 100, 40, -20, 20);
+  m_h2d["reso_reco_pt"] = new TH2F(("reso_reco_pt_" + name).c_str(), "reso vs reco pt", 16, 20, 100, 40, -20, 20);
 
 }
 
@@ -28,20 +30,24 @@ void FilterValidation::fill_histograms(const xAOD::TauJet * tau, const TruthFake
 
   m_h1d["reco_pt"]->Fill(tau->pt() / 1000., weight);
   m_h1d["reco_pt_wide"]->Fill(tau->pt() / 1000., weight);
-  m_h1d["truth_pt"]->Fill(truthFakeTau->pt() / 1000., weight);
+  m_h1d["reco_nwidetracks"]->Fill(tau->nWideTracks(), weight);
+  m_h1d["reco_bdt_score"]->Fill(tau->discriminant(xAOD::TauJetParameters::TauID::BDTJetScore), weight);
   m_h1d["reco_ntracks"]->Fill(tau->nTracks(), weight);
+
   for (unsigned int itr = 0; itr < tau->nTracks(); itr++) {
     m_h1d["reco_track_pt"]->Fill(tau->track(itr)->pt() / 1000., weight);
   }
-  m_h1d["truth_ntracks"]->Fill(truthFakeTau->nTracks(), weight);
-  m_h1d["reco_nwidetracks"]->Fill(tau->nWideTracks(), weight);
-  m_h1d["truth_nwidetracks"]->Fill(truthFakeTau->nWideTracks(), weight);
-  m_h1d["reco_bdt_score"]->Fill(tau->discriminant(xAOD::TauJetParameters::TauID::BDTJetScore), weight);
 
-  m_h1d["reco_truth_pt"]->Fill((tau->pt() - truthFakeTau->pt()) / 1000.);
 
-  m_h2d["ntracks"]->Fill(truthFakeTau->nTracks(), tau->nTracks(), weight);
-  m_h2d["nwidetracks"]->Fill(truthFakeTau->nWideTracks(), tau->nWideTracks(), weight);
-  m_h2d["pt"]->Fill(truthFakeTau->pt() / 1000., tau->pt() / 1000., weight);
-
+  if (truthFakeTau != NULL) {
+    m_h1d["truth_pt"]->Fill(truthFakeTau->pt() / 1000., weight);
+    m_h1d["truth_ntracks"]->Fill(truthFakeTau->nTracks(), weight);
+    m_h1d["truth_nwidetracks"]->Fill(truthFakeTau->nWideTracks(), weight);
+    m_h1d["reco_truth_pt"]->Fill((tau->pt() - truthFakeTau->pt()) / 1000.);
+    m_h2d["ntracks"]->Fill(truthFakeTau->nTracks(), tau->nTracks(), weight);
+    m_h2d["nwidetracks"]->Fill(truthFakeTau->nWideTracks(), tau->nWideTracks(), weight);
+    m_h2d["pt"]->Fill(truthFakeTau->pt() / 1000., tau->pt() / 1000., weight);
+    m_h2d["reso_truth_pt"]->Fill(truthFakeTau->pt() / 1000., (tau->pt() - truthFakeTau->pt()) / 1000.);
+    m_h2d["reso_reco_pt"]->Fill(tau->pt() / 1000., (tau->pt() - truthFakeTau->pt()) / 1000.);
+  }
 }

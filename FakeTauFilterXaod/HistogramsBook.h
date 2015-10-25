@@ -4,6 +4,7 @@
 #include <map>
 
 #include "TH1F.h"
+#include "TH2F.h"
 
 #include "xAODTau/TauJet.h"
 #include "FakeTauFilterXaod/FakeTauFilterXaod.h"
@@ -19,6 +20,7 @@ class HistogramsBook
 
   void book();
   void fill(const xAOD::TauJet * tau1, const xAOD::TauJet * tau2, const double & weight=1.0);
+  void fill_resol(const xAOD::TauJet * tau, const TruthFakeTau * truthFakeTau, const double & weight=1.0);
   void record(EL::Worker* wk);
 
  private:
@@ -27,6 +29,7 @@ class HistogramsBook
   void fill_flavour_hist(TH1F* hist, const xAOD::TauJet* tau, const double & weight);
   std::string m_name;
   std::map<std::string, TH1F*> m_h1d;
+  std::map<std::string, TH2F*> m_h2d;
 
 
 };

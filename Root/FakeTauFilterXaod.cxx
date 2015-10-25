@@ -15,13 +15,14 @@ FakeTauFilterXaod::FakeTauFilterXaod(const std::string & name) : asg::AsgTool(na
   declareProperty("FastJetEtamax", m_fastjet_eta_max=2.8);
   declareProperty("TrueTrackPt", m_true_track_pt=1000.);
   declareProperty("MinPtCore", m_pt_core_min=25000.);
-  declareProperty("MinTracksCore", m_min_trk_core=1);
+  declareProperty("MinTracksCore", m_min_trk_core=0);
   declareProperty("MaxTracksCore", m_max_trk_core=4);
   declareProperty("MinTracksIso", m_min_trk_iso=0);
   declareProperty("MaxTracksIso", m_max_trk_iso=2);
   declareProperty("CoreDr", m_core_dr=0.2);
   declareProperty("IsoDr", m_iso_dr=0.4);
   declareProperty("NumberOfFakeTaus", m_n_truthfakes=2);
+  declareProperty("DrTauTau", m_dr_tau_tau=2.8);
 
 }
 
@@ -149,17 +150,15 @@ StatusCode FakeTauFilterXaod::execute(const xAOD::TruthParticleContainer * Truth
     TruthFakeTau* truthfaketau = new TruthFakeTau(jet_core);
     truthfaketau->set_ntracks(n_tracks_core);
     truthfaketau->set_nwidetracks(n_tracks_iso);
-    m_TruthFakeTaus.push_back(truthfaketau);
-    // ATH_MSG_DEBUG("TruthFakeTau with pt = " << truthfaketau.pt() 
-    // 		 << ", eta = " << truthfaketau.pseudorapidity()
-    // 		 << ", phi = " << truthfaketau.phi()
-    // 		 << ", nTracks = " << truthfaketau.nTracks());
 
+    // only store taus passing the track selection
+    if (truthfaketau->is_good()) 
+      m_TruthFakeTaus.push_back(truthfaketau);
 
     // check that the jet passes the track counting requirements
     if (n_tracks_core >= m_min_trk_core and n_tracks_core <= m_max_trk_core)
       if (n_tracks_iso >= m_min_trk_iso and n_tracks_iso <= m_max_trk_iso) 
-	n_good_jets += 1;
+    	n_good_jets += 1;
   }
 
   if (n_good_jets >= m_n_truthfakes)
@@ -167,11 +166,34 @@ StatusCode FakeTauFilterXaod::execute(const xAOD::TruthParticleContainer * Truth
   else
     m_pass_filter = false;
 
-
+  make_pairs();
 
   return StatusCode::SUCCESS;
 
 }
+
+
+void FakeTauFilterXaod::make_pairs()
+{
+  m_DiTruthFakeTaus.clear();
+  for (unsigned int i1 = 0; i1 < m_TruthFakeTaus.size(); i1 ++) {
+    auto* t1 = m_TruthFakeTaus.at(i1);
+    TLorentzVector t1_vec;
+    t1_vec.SetPtEtaPhiM(t1->pt(), t1->pseudorapidity(), t1->phi(), t1->m());
+    for (unsigned int i2 = i1 + 1; i2 < m_TruthFakeTaus.size(); i2++) {
+      auto* t2 = m_TruthFakeTaus.at(i2);
+      TLorentzVector t2_vec;
+      t2_vec.SetPtEtaPhiM(t2->pt(), t2->pseudorapidity(), t2->phi(), t2->m());
+      if (t1_vec.DeltaR(t2_vec) < m_dr_tau_tau) {
+	m_DiTruthFakeTaus.push_back(std::pair<TruthFakeTau*, TruthFakeTau*>(t1, t2));
+      }
+    }
+  }
+
+
+
+}
+
 
 
 bool FakeTauFilterXaod::is_good_jet(const fastjet::PseudoJet & jet)

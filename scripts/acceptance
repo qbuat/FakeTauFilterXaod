@@ -38,16 +38,10 @@ if __name__ == '__main__':
     
     alg = ROOT.AcceptanceHadHad()
     alg.SetName('AcceptanceHadHad')
-    alg.tau1_pt = 20000
-    alg.tau2_pt = 20000
+    alg.tau1_pt = 30000
+    alg.tau2_pt = 30000
     alg.min_dr_tautau = 0.
-    alg.max_dr_tautau = 20.
-    alg.n_jets = 0
-    alg.jet1_pt = 50000
-    alg.jet2_pt = 30000
-    alg.jet_eta = 4.5
-    alg.do_vbf_sel = True
-    alg.delta_eta_jj = 2.0
+    alg.max_dr_tautau = 2.4
 
 
 

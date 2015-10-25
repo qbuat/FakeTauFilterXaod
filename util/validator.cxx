@@ -43,6 +43,8 @@ int main(int argc, char **argv) {
   } else {
     filenames = Utils::splitNames(argv[1]);
   }
+  for (auto f: filenames)
+    std::cout << f << std::endl;
 
   // Create the TEvent object
   xAOD::TEvent event(xAOD::TEvent::kClassAccess);
@@ -56,9 +58,12 @@ int main(int argc, char **argv) {
   RETURN_CHECK(APP_NAME, event.readFrom(&chain1));
 
   FakeTauFilterXaod filter("FakeTauFilter");
+  CHECK(filter.setProperty("FastJetPtmin", 20000.));
   CHECK(filter.initialize());
 
 
+  FilterValidation val_nosel("val_nosel");
+  FilterValidation val_nosel_truth("val_nosel_truthselected");
   FilterValidation val_presel("val_presel");
   FilterValidation val_presel_truth("val_presel_truthselected");
   FilterValidation val_core_tracks("val_core_tracks");
@@ -71,6 +76,9 @@ int main(int argc, char **argv) {
 
 
   auto * h1 = new TH1I("matched", "matched", 1, 0.5, 1.5);
+  auto * hngood = new TH1F("ngood", "ngood", 5, -0.5, 4.5);
+  auto * hnpassfilter = new TH1F("npassfilter", "npassfilter", 8, -0.5, 7.5);
+  auto * hnpairpassfilter = new TH1F("npairpassfilter", "npairpassfilter", 8, -0.5, 7.5);
   auto * he = new TH1F("events", "events", 1, 0.5, 1.5);
   auto * hw = new TH1F("weighted_events", "weighted_events", 1, 0.5, 1.5);
 
@@ -78,6 +86,9 @@ int main(int argc, char **argv) {
   for (Long64_t entry = 0; entry < entries; entry++) {
     if ((entry%200)==0)
       ::Info(APP_NAME, "Start processing event %d", (int)entry);
+
+    // if (entry > 20000) 
+    //   break;
 
     event.getEntry(entry);
 
@@ -108,15 +119,33 @@ int main(int argc, char **argv) {
     he->Fill(1.0);
     hw->Fill(1.0, weight);
 
-    for (const auto jet: *jets) {
-      int label = jet->getAttribute<int>("PartonTruthLabelID");
-      ::Info(APP_NAME, "Truth parton label: %d - Parton: %d - Quark: %d", label, (int)MC::PID::isParton(label), (int)MC::PID::isQuark(label));
-    }
+  
 
     // ::Info(APP_NAME, "--------------------------------------");
     CHECK(filter.execute(truthParticles));
+    
+    auto filtered_part = filter.GetTruthFakeTaus();
+    hnpassfilter->Fill(filtered_part.size());
+
+    auto filtered_pairs = filter.GetDiTruthFakeTaus();
+    hnpairpassfilter->Fill(filtered_pairs.size());
+
+    int n_truth_matched_good = 0;
     for (const auto tau: *taus) {
 
+      auto * truthfake = filter.matchedFake(tau);
+
+
+      h1->Fill((int)(truthfake != NULL), weight);
+      val_nosel.fill_histograms(tau, truthfake, weight);
+      
+      if (truthfake == NULL)
+	continue;
+
+      if (truthfake->is_good()) {
+	n_truth_matched_good += 1;
+	val_nosel_truth.fill_histograms(tau, truthfake, weight);
+      }
 
       if (tau->pt() < 30000.) 
 	continue;
@@ -124,12 +153,6 @@ int main(int argc, char **argv) {
       if (fabs(tau->eta() > 2.5) )
 	  continue;
 
-      auto * truthfake = filter.matchedFake(tau);
-      
-      h1->Fill((int)(truthfake != NULL), weight);
-      
-      if (truthfake == NULL)
-	continue;
       val_presel.fill_histograms(tau, truthfake, weight);
 
       if (truthfake->is_good())
@@ -166,11 +189,21 @@ int main(int argc, char **argv) {
       if (truthfake->is_good())
 	val_bdt_truth.fill_histograms(tau, truthfake, weight);
     }
+    hngood->Fill(n_truth_matched_good);
 	  
   }
 
+
   TFile fout("validation.root", "RECREATE");
 
+  for (auto it: val_nosel.Histograms())
+    it.second->Write();
+  for (auto it: val_nosel_truth.Histograms())
+    it.second->Write();
+  for (auto it: val_nosel_truth.Maps())
+    it.second->Write();
+  for (auto it: val_presel_truth.Maps())
+    it.second->Write();
   for (auto it: val_presel.Histograms())
     it.second->Write();
   for (auto it: val_presel.Maps())
@@ -210,5 +243,8 @@ int main(int argc, char **argv) {
   h1->Write();
   he->Write();
   hw->Write();
+  hngood->Write();
+  hnpassfilter->Write();
+  hnpairpassfilter->Write();
   fout.Close();
 }
