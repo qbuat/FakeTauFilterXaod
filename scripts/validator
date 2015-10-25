@@ -78,7 +78,7 @@ if __name__ == '__main__':
     elif args.driver == 'grid':
         driver = ROOT.EL.PrunDriver()
 
-        out_ds_name = 'user.qbuat.hadhad_filter_validation.' + sample_name + 'v' + args.grid_out_version 
+        out_ds_name = 'user.qbuat.hadhad_filter_validation.' + sample_name + '.v' + args.grid_out_version 
         out_ds_name = out_ds_name.replace('Pythia8EvtGen_A14NNPDF23LO', '')
         driver.options().setString("nc_outputSampleName", out_ds_name)
         # job.options().setDouble("nc_official", 1);
