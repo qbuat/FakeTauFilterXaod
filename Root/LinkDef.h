@@ -1,3 +1,5 @@
+#include <FakeTauFilterXaod/FilterValidator.h>
+
 #include <FakeTauFilterXaod/AcceptanceHadHad.h>
 
 #ifdef __CINT__
@@ -11,4 +13,8 @@
 
 #ifdef __CINT__
 #pragma link C++ class AcceptanceHadHad+;
+#endif
+
+#ifdef __CINT__
+#pragma link C++ class FilterValidator+;
 #endif

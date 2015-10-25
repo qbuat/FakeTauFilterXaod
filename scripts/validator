@@ -1,0 +1,89 @@
+#!/usr/bin/env python
+import os
+import uuid
+import argparse
+import ROOT
+
+
+if __name__ == '__main__':
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--verbose', default=False, action='store_true', help='default = %(default)s')
+    parser.add_argument('--sample', default='mc15_13TeV.361021.Pythia8EvtGen_A14NNPDF23LO_jetjet_JZ1W.merge.AOD.e3569_s2576_s2132_r6630_r6264')
+    parser.add_argument('--num-events', default=-1, type=int, help='default = %(default)s')
+    parser.add_argument('--run-dir', type=str, default=None, help='default = %(default)s')
+    parser.add_argument('--grid-out-version', type=str, default='1')
+    group_driver = parser.add_mutually_exclusive_group()
+    group_driver.add_argument('--direct', dest='driver', action='store_const', const='direct', help='Run your jobs locally.')
+    group_driver.add_argument('--grid', dest='driver', action='store_const', const='grid', help='Run your jobs on the grid.')
+    group_driver.set_defaults(driver='direct')
+    args = parser.parse_args()
+
+
+    ROOT.gROOT.Macro('$ROOTCOREDIR/scripts/load_packages.C')
+    # if not ROOT.xAOD.Init().isSuccess():
+    #     raise RuntimeError
+
+    sample_name = args.sample
+
+    if args.driver == 'direct':
+        print 'grab eos samples'
+        # Get SampleHandler from EOS
+        from eos import get_sample
+        sample = get_sample(sample_name)
+    elif args.driver == 'grid':
+        sample = ROOT.SH.SampleHandler()
+        ROOT.SH.scanDQ2(sample, sample_name)
+
+    sample.printContent()
+    sample.setMetaString ("nc_tree", "CollectionTree")
+    
+    alg = ROOT.FilterValidator()
+    alg.SetName('FilterValidator')
+
+
+
+    if args.verbose:
+        # See atlas/Control/AthToolSupport/AsgTools/AsgTools/MsgLevel.h
+        alg.setMsgLevel(1) # VERBOSE
+    else:
+        alg.setMsgLevel(3) # INFO
+
+    # Setup the EventLoop Job
+    job = ROOT.EL.Job()
+    job.sampleHandler(sample)
+    job.algsAdd(alg)
+
+    # out = ROOT.EL.OutputStream("hist-output", "xAOD");
+    # out.options().setString(ROOT.EL.OutputStream.optContainerSuffix, "out");
+    # job.outputAdd(out);
+
+
+
+
+    if args.num_events > 0:
+      job.options().setDouble(ROOT.EL.Job.optMaxEvents, args.num_events)
+
+    # define the run dir
+    if args.run_dir == None:
+        run_dir = 'run_' + uuid.uuid4().hex
+    else:
+        run_dir = args.run_dir
+        
+    # run, run, run!
+    if args.driver == 'direct':
+        driver = ROOT.EL.DirectDriver()
+        driver.submit(job, run_dir)
+
+    elif args.driver == 'grid':
+        driver = ROOT.EL.PrunDriver()
+
+        out_ds_name = 'user.qbuat.hadhad_filter_validation.' + sample_name + 'v' + args.grid_out_version 
+        out_ds_name = out_ds_name.replace('Pythia8EvtGen_A14NNPDF23LO', '')
+        driver.options().setString("nc_outputSampleName", out_ds_name)
+        # job.options().setDouble("nc_official", 1);
+        # job.options().setString("nc_voms", "atlas:/atlas/phys-higgs/Role=production");
+        job.options().setDouble("nc_mergeOutput", 0)
+        driver.options().setDouble("nc_nFilesPerJob", 1)
+        driver.options().setDouble("nc_showCmd", 1)
+        driver.submitOnly(job, run_dir)

@@ -152,9 +152,9 @@ StatusCode FakeTauFilterXaod::execute(const xAOD::TruthParticleContainer * Truth
     truthfaketau->set_nwidetracks(n_tracks_iso);
 
     // only store taus passing the track selection
-    if (truthfaketau->is_good()) 
-      m_TruthFakeTaus.push_back(truthfaketau);
-
+    // if (truthfaketau->is_good()) 
+    m_TruthFakeTaus.push_back(truthfaketau);
+      
     // check that the jet passes the track counting requirements
     if (n_tracks_core >= m_min_trk_core and n_tracks_core <= m_max_trk_core)
       if (n_tracks_iso >= m_min_trk_iso and n_tracks_iso <= m_max_trk_iso) 
@@ -178,10 +178,14 @@ void FakeTauFilterXaod::make_pairs()
   m_DiTruthFakeTaus.clear();
   for (unsigned int i1 = 0; i1 < m_TruthFakeTaus.size(); i1 ++) {
     auto* t1 = m_TruthFakeTaus.at(i1);
+    if (not t1->is_good())
+      continue;
     TLorentzVector t1_vec;
     t1_vec.SetPtEtaPhiM(t1->pt(), t1->pseudorapidity(), t1->phi(), t1->m());
     for (unsigned int i2 = i1 + 1; i2 < m_TruthFakeTaus.size(); i2++) {
       auto* t2 = m_TruthFakeTaus.at(i2);
+      if (not t2->is_good())
+	continue;
       TLorentzVector t2_vec;
       t2_vec.SetPtEtaPhiM(t2->pt(), t2->pseudorapidity(), t2->phi(), t2->m());
       if (t1_vec.DeltaR(t2_vec) < m_dr_tau_tau) {
