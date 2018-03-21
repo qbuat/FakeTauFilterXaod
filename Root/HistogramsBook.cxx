@@ -3,8 +3,7 @@
 #include "AsgTools/MsgStream.h"
 #include "AsgTools/MsgStreamMacros.h"
 
-#include "TruthUtils/PIDCodes.h"
-#include "TruthUtils/PIDUtils.h"
+#include "TruthUtils/PIDHelpers.h"
 
 HistogramsBook::HistogramsBook(const std::string & name): m_name(name)
 {}
@@ -132,7 +131,7 @@ void HistogramsBook::fill_resol(const xAOD::TauJet * tau, const TruthFakeTau * t
     m_h2d["resol_pt"]->Fill(truthFakeTau->pt() / 1000., tau->pt() / 1000., weight);
     m_h2d["resol_eta"]->Fill(truthFakeTau->eta(), tau->eta(), weight);
     m_h2d["resol_ntracks"]->Fill(truthFakeTau->nTracks(), tau->nTracks(), weight);
-    m_h2d["resol_nwidetracks"]->Fill(truthFakeTau->nWideTracks(), tau->nWideTracks(), weight);
+    m_h2d["resol_nwidetracks"]->Fill(truthFakeTau->nWideTracks(), tau->nTracks(xAOD::TauJetParameters::TauTrackFlag::classifiedIsolation), weight);
   }
 
 }

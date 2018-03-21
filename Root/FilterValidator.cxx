@@ -16,7 +16,7 @@
 #include "xAODTau/TauJetContainer.h"
 
 // this is needed to distribute the algorithm to the workers
-ClassImp(FilterValidator)
+//ClassImp(FilterValidator)
 
 /// Helper macro for checking xAOD::TReturnCode return values
 #define EL_RETURN_CHECK( CONTEXT, EXP )                     \
@@ -206,7 +206,7 @@ EL::StatusCode FilterValidator :: execute ()
     if (truthfake->is_good())
       m_book["core_tracks_passfilter"]->fill_histograms(tau, truthfake, weight);
 
-    if (tau->nWideTracks() != 0)
+    if (tau->nTracks(xAOD::TauJetParameters::TauTrackFlag::classifiedIsolation) != 0)
       continue;
       
     m_book["isol_tracks"]->fill_histograms(tau, truthfake, weight);

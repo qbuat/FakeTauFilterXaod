@@ -46,7 +46,7 @@ public:
   virtual EL::StatusCode histFinalize ();
 
   // this is needed to distribute the algorithm to the workers
-  ClassDef(FilterValidator, 1);
+  //  ClassDef(FilterValidator, 1);
 };
 
 #endif

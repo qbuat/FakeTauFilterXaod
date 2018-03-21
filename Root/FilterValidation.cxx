@@ -49,7 +49,7 @@ void FilterValidation::fill_histograms(const xAOD::TauJet * tau, const TruthFake
   m_h1d["weighted_counts"]->Fill(1., weight);
   m_h1d["reco_pt"]->Fill(tau->pt() / 1000., weight);
   m_h1d["reco_pt_wide"]->Fill(tau->pt() / 1000., weight);
-  m_h1d["reco_nwidetracks"]->Fill(tau->nWideTracks(), weight);
+  m_h1d["reco_nwidetracks"]->Fill(tau->nTracks(xAOD::TauJetParameters::TauTrackFlag::classifiedIsolation), weight);
   m_h1d["reco_bdt_score"]->Fill(tau->discriminant(xAOD::TauJetParameters::TauID::BDTJetScore), weight);
   m_h1d["reco_ntracks"]->Fill(tau->nTracks(), weight);
 
@@ -64,7 +64,7 @@ void FilterValidation::fill_histograms(const xAOD::TauJet * tau, const TruthFake
     m_h1d["truth_nwidetracks"]->Fill(truthFakeTau->nWideTracks(), weight);
     m_h1d["reco_truth_pt"]->Fill((tau->pt() - truthFakeTau->pt()) / 1000.);
     m_h2d["ntracks"]->Fill(truthFakeTau->nTracks(), tau->nTracks(), weight);
-    m_h2d["nwidetracks"]->Fill(truthFakeTau->nWideTracks(), tau->nWideTracks(), weight);
+    m_h2d["nwidetracks"]->Fill(truthFakeTau->nWideTracks(), tau->nTracks(xAOD::TauJetParameters::TauTrackFlag::classifiedIsolation), weight);
     m_h2d["pt"]->Fill(truthFakeTau->pt() / 1000., tau->pt() / 1000., weight);
     m_h2d["reso_truth_pt"]->Fill(truthFakeTau->pt() / 1000., (tau->pt() - truthFakeTau->pt()) / 1000.);
     m_h2d["reso_reco_pt"]->Fill(tau->pt() / 1000., (tau->pt() - truthFakeTau->pt()) / 1000.);

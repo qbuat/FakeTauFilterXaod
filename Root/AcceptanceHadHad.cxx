@@ -10,7 +10,7 @@
 
 #include "AsgTools/MsgStream.h"
 #include "AsgTools/MsgStreamMacros.h"
-#include "TruthUtils/PIDUtils.h"
+#include "TruthUtils/PIDHelpers.h"
 
 // EDM includes
 #include "xAODEventInfo/EventInfo.h"
@@ -30,11 +30,12 @@
   } while( false )
 
 // this is needed to distribute the algorithm to the workers
-ClassImp(AcceptanceHadHad)
+//ClassImp(AcceptanceHadHad)
 
 
 
-AcceptanceHadHad :: AcceptanceHadHad () : m_book("default"),
+AcceptanceHadHad :: AcceptanceHadHad (const std::string& name, ISvcLocator *pSvcLocator) : EL::AnaAlgorithm (name, pSvcLocator), 
+  m_book("default"),
   m_book_os("os"),
   m_book_loose("loose")
 
@@ -109,7 +110,7 @@ EL::StatusCode AcceptanceHadHad :: changeInput (bool /*firstFile*/)
 
 
 
-EL::StatusCode AcceptanceHadHad :: initialize ()
+StatusCode AcceptanceHadHad :: initialize ()
 {
 
   if (asg::ToolStore::contains<FakeTauFilterXaod>("FakeTauFilter"))
@@ -127,7 +128,7 @@ EL::StatusCode AcceptanceHadHad :: initialize ()
 
 
 
-EL::StatusCode AcceptanceHadHad :: execute ()
+StatusCode AcceptanceHadHad :: execute ()
 {
   xAOD::TEvent* event = wk()->xaodEvent();
   ATH_MSG_DEBUG("execute next event");
@@ -264,7 +265,7 @@ EL::StatusCode AcceptanceHadHad :: postExecute ()
 
 
 
-EL::StatusCode AcceptanceHadHad :: finalize ()
+StatusCode AcceptanceHadHad :: finalize ()
 {
   if (m_filter) {
     m_filter = NULL;

@@ -1,7 +1,7 @@
 #ifndef FakeTauFilterXaod_AcceptanceHadHad_H
 #define FakeTauFilterXaod_AcceptanceHadHad_H
 
-#include <EventLoop/Algorithm.h>
+#include <AnaAlgorithm/AnaAlgorithm.h>
 #include "xAODJet/JetContainer.h"
 #include "xAODTau/TauJetContainer.h"
 
@@ -10,7 +10,7 @@
 #include "FakeTauFilterXaod/HistogramsBook.h"
 #include "FakeTauFilterXaod/FakeTauFilterXaod.h"
 
-class AcceptanceHadHad : public EL::Algorithm
+class AcceptanceHadHad : public EL::AnaAlgorithm
 {
   // put your configuration variables here as public variables.
   // that way they can be set directly from CINT and python.
@@ -48,17 +48,17 @@ public:
 
  public:
   // this is a standard constructor
-  AcceptanceHadHad ();
+  AcceptanceHadHad (const std::string& name, ISvcLocator* pSvcLocator);
 
   // these are the functions inherited from Algorithm
   virtual EL::StatusCode setupJob (EL::Job& job);
   virtual EL::StatusCode fileExecute ();
   virtual EL::StatusCode histInitialize ();
   virtual EL::StatusCode changeInput (bool firstFile);
-  virtual EL::StatusCode initialize ();
-  virtual EL::StatusCode execute ();
+  virtual StatusCode initialize () override;
+  virtual StatusCode execute () override;
   virtual EL::StatusCode postExecute ();
-  virtual EL::StatusCode finalize ();
+  virtual StatusCode finalize () override;
   virtual EL::StatusCode histFinalize ();
 
   virtual EL::StatusCode select_taus(xAOD::TauJetContainer *selected_taus, const xAOD::TauJetContainer *taus);
@@ -68,7 +68,7 @@ public:
 
   virtual EL::StatusCode select_jets(xAOD::JetContainer *selected_jets, const xAOD::JetContainer *jets, const xAOD::TauJet *tau1, const xAOD::TauJet *tau2);
   // this is needed to distribute the algorithm to the workers
-  ClassDef(AcceptanceHadHad, 1);
+  //  ClassDef(AcceptanceHadHad, 1);
 };
 
 #endif

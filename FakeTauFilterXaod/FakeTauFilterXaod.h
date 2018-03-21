@@ -2,7 +2,7 @@
 #define FAKETAUFILTERXAOD_FAKETAUFILTERXAOD_H
 
 #include "AsgTools/AsgTool.h"
-#include "TruthUtils/FastJet.h"
+#include "HEPUtils/FastJet.h"
 /* #include "TruthUtils/PIDUtils.h" */
 #include "xAODTruth/TruthParticle.h"
 #include "xAODTruth/TruthParticleContainer.h"
